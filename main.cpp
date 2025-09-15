@@ -1,4 +1,5 @@
 // Lors de la compilation, penser à faire appliquer l'option -lcurl
+// Sur windows, il faut 1/ Installer MSYS2 2/ Installer : pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-curl 3/ Faire la compilation depuis la console MSYS2
 
 #include <iostream>
 #include <string>
