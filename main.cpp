@@ -1,56 +1,51 @@
-#include <windows.h>
-#include <wininet.h>
+// Lors de la compilation, penser à faire appliquer l'option -lcurl
+
 #include <iostream>
+#include <string>
+#include <curl/curl.h>
 
-#pragma comment(lib, "wininet.lib")
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
 
-int main() {
-    // Initialiser la session WinInet
-    HINTERNET hInternet = InternetOpen(L"MyAgent", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-    if (!hInternet) {
-        std::cout << "InternetOpen failed\n";
-        return 1;
+int main(void)
+{
+    CURL *curl;
+    CURLcode res;
+    std::string readBuffer;
+
+    curl = curl_easy_init();
+    if (curl) {
+        // Définition de l'URL
+        curl_easy_setopt(curl, CURLOPT_URL, "https://cyber.moingt.com/titi");
+
+        // Callback pour stocker la réponse
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+
+        // Définition d’un User-Agent personnalisé
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "MyUserAgent");
+
+        // Exécute la requête
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            std::cerr << "Erreur curl_easy_perform(): "
+                      << curl_easy_strerror(res) << std::endl;
+        } else {
+            // Récupération du code HTTP
+            long response_code;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
+            std::cout << "HTTP code: " << response_code << std::endl;
+            std::cout << "Réponse :" << std::endl;
+            std::cout << readBuffer << std::endl;
+        }
+
+        // Nettoyage
+        curl_easy_cleanup(curl);
     }
-
-    // Connexion au serveur
-    HINTERNET hConnect = InternetConnect(hInternet, L"eobshlal3lh5vri.m.pipedream.net", INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
-    if (!hConnect) {
-        std::cout << "InternetConnect failed\n";
-        InternetCloseHandle(hInternet);
-        return 1;
-    }
-
-    // Préparer la requête HTTP GET
-    HINTERNET hRequest = HttpOpenRequest(hConnect, L"GET", L"/", NULL, NULL, NULL, 0, 0);
-    if (!hRequest) {
-        std::cout << "HttpOpenRequest failed\n";
-        InternetCloseHandle(hConnect);
-        InternetCloseHandle(hInternet);
-        return 1;
-    }
-
-    // Envoyer la requête
-    BOOL sent = HttpSendRequest(hRequest, NULL, 0, NULL, 0);
-    if (!sent) {
-        std::cout << "HttpSendRequest failed\n";
-        InternetCloseHandle(hRequest);
-        InternetCloseHandle(hConnect);
-        InternetCloseHandle(hInternet);
-        return 1;
-    }
-
-    // Lire et afficher la réponse
-    char buffer[1024];
-    DWORD bytesRead = 0;
-    while (InternetReadFile(hRequest, buffer, sizeof(buffer) - 1, &bytesRead) && bytesRead) {
-        buffer[bytesRead] = '\0';
-        std::cout << buffer;
-    }
-
-    // Fermer les handles
-    InternetCloseHandle(hRequest);
-    InternetCloseHandle(hConnect);
-    InternetCloseHandle(hInternet);
-
     return 0;
 }
